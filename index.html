@@ -910,7 +910,7 @@
 
     const keyResponse = await fetch(VAPID_PUBLIC_KEY_URL);
     if (!keyResponse.ok) {
-      throw new Error('Unable to load push key');
+      throw new Error('Unable to load push key from the server. On iPhone, open the installed Home Screen app over HTTPS, not a normal Safari tab or local file.');
     }
 
     const { publicKey } = await keyResponse.json();
@@ -1118,7 +1118,11 @@
       updateReminderStatus('Test push scheduled in 3 seconds. Lock the phone now.', true);
       showBanner('Test push scheduled', 'Lock the phone now to check if it arrives.');
     } catch (error) {
-      updateReminderStatus(`❌ ${error.message}`);
+      if (error?.message?.includes('push key')) {
+        updateReminderStatus('❌ No usable push subscription yet. On iPhone, install the web app to Home Screen first, then reopen it and enable notifications again.');
+      } else {
+        updateReminderStatus(`❌ ${error.message}`);
+      }
     }
   }
 
