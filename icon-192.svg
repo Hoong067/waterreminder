@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="Zoey's Hydration icon">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b8e4f9"/>
+      <stop offset="100%" stop-color="#4ab8e8"/>
+    </linearGradient>
+    <linearGradient id="drop" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#e8f7ff" stop-opacity="0.9"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="44" fill="url(#bg)"/>
+  <circle cx="60" cy="52" r="12" fill="#ffffff" fill-opacity="0.55"/>
+  <circle cx="142" cy="64" r="8" fill="#ffffff" fill-opacity="0.45"/>
+  <path d="M96 32C78 56 58 79 58 109c0 21 17 37 38 37s38-16 38-37c0-30-20-53-38-77z" fill="url(#drop)" stroke="#1a7fb5" stroke-width="6"/>
+  <path d="M82 104c5 10 21 17 36 14" fill="none" stroke="#1a7fb5" stroke-width="6" stroke-linecap="round" opacity="0.65"/>
+  <circle cx="81" cy="98" r="6" fill="#1a7fb5"/>
+  <circle cx="111" cy="98" r="6" fill="#1a7fb5"/>
+</svg>

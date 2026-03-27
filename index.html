@@ -9,6 +9,7 @@
 <link rel="icon" href="logo.png">
 <link rel="shortcut icon" href="logo.png">
 <link rel="apple-touch-icon" href="logo.png">
+<link rel="manifest" href="manifest.webmanifest">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -788,9 +789,13 @@
 
 <script>
   const APP_ICON = 'logo.png';
+  const STORAGE_KEY = 'zoeys-hydration-state';
+  const VAPID_PUBLIC_KEY_URL = '/api/vapid-public-key';
+  const PUSH_SETTINGS_URL = '/api/settings';
+  const PUSH_SUBSCRIBE_URL = '/api/subscribe';
+  const PUSH_TEST_URL = '/api/send-test';
 
-  // State
-  let state = {
+  const defaultState = {
     current: 0,
     goal: 2000,
     interval: 60,
@@ -799,7 +804,154 @@
     streak: [true, true, true, false, true, true, false]
   };
 
-  let reminderTimer = null;
+  function loadState() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (!saved || typeof saved !== 'object') {
+        return { ...defaultState };
+      }
+
+      return {
+        ...defaultState,
+        ...saved,
+        current: Number.isFinite(saved.current) ? saved.current : defaultState.current,
+        goal: Number.isFinite(saved.goal) ? saved.goal : defaultState.goal,
+        interval: Number.isFinite(saved.interval) ? saved.interval : defaultState.interval,
+        notifEnabled: Boolean(saved.notifEnabled),
+        logs: Array.isArray(saved.logs) ? saved.logs : defaultState.logs,
+        streak: Array.isArray(saved.streak) ? saved.streak : defaultState.streak
+      };
+    } catch {
+      return { ...defaultState };
+    }
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch {
+      // Ignore storage failures, e.g. private mode or blocked storage.
+    }
+  }
+
+  function formatInterval(mins) {
+    return mins < 60 ? `${mins} minutes` : `${mins / 60 === 1 ? '1 hour' : mins / 60 + ' hours'}`;
+  }
+
+  function updateNotificationButton(enabled) {
+    const button = document.getElementById('permBtn');
+    if (enabled) {
+      button.style.background = 'linear-gradient(135deg, #27ae60, #1e8449)';
+      button.innerHTML = '<span>✅</span> Notifications Enabled!';
+    } else {
+      button.style.background = 'linear-gradient(135deg, var(--ocean), var(--deep))';
+      button.innerHTML = '<span>🔔</span> Enable Notifications';
+    }
+  }
+
+  function updateReminderStatus(message, isSuccess = false) {
+    const status = document.getElementById('permStatus');
+    status.textContent = message;
+    status.className = isSuccess ? 'perm-status granted' : 'perm-status';
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+
+    return outputArray;
+  }
+
+  async function syncPushSettings() {
+    try {
+      await fetch(PUSH_SETTINGS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled: state.notifEnabled,
+          intervalMinutes: state.interval
+        })
+      });
+    } catch {
+      // Keep the app usable even if the backend is temporarily unavailable.
+    }
+  }
+
+  async function savePushSubscription(subscription) {
+    const response = await fetch(PUSH_SUBSCRIBE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(subscription)
+    });
+
+    if (!response.ok) {
+      throw new Error('Unable to save push subscription');
+    }
+  }
+
+  async function ensurePushSubscription() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      throw new Error('Push notifications are not supported in this browser');
+    }
+
+    const registration = await navigator.serviceWorker.ready;
+    const existingSubscription = await registration.pushManager.getSubscription();
+
+    if (existingSubscription) {
+      await savePushSubscription(existingSubscription.toJSON());
+      return existingSubscription;
+    }
+
+    const keyResponse = await fetch(VAPID_PUBLIC_KEY_URL);
+    if (!keyResponse.ok) {
+      throw new Error('Unable to load push key');
+    }
+
+    const { publicKey } = await keyResponse.json();
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey)
+    });
+
+    await savePushSubscription(subscription.toJSON());
+    return subscription;
+  }
+
+  async function restorePushState() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      return;
+    }
+
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
+
+      if (!subscription) {
+        state.notifEnabled = false;
+        saveState();
+        updateNotificationButton(false);
+        return;
+      }
+
+      if (state.notifEnabled) {
+        updateNotificationButton(true);
+        document.getElementById('notifToggle').classList.add('on');
+        updateReminderStatus(`🌸 Reminder interval saved: every ${formatInterval(state.interval)}.`, true);
+        await syncPushSettings();
+      }
+    } catch {
+      // If the browser refuses service workers, keep the local app functional.
+    }
+  }
+
+  // State
+  let state = loadState();
 
   // Init bubbles
   function createBubbles() {
@@ -828,12 +980,22 @@
     }).join('');
   }
 
+  function syncIntervalUI() {
+    document.getElementById('intervalSub').textContent = `Every ${formatInterval(state.interval)}`;
+    document.querySelectorAll('.interval-btn').forEach((button) => {
+      const text = button.textContent.trim();
+      const mins = text === '1 hr' ? 60 : text === '1.5 hr' ? 90 : text === '2 hr' ? 120 : parseInt(text, 10);
+      button.classList.toggle('active', mins === state.interval);
+    });
+  }
+
   // Update UI
   function updateUI() {
     const pct = Math.min(state.current / state.goal, 1);
     document.getElementById('currentMl').textContent = state.current;
     document.getElementById('goalMl').textContent = state.goal;
     document.getElementById('percentText').textContent = Math.round(pct * 100) + '% today';
+    document.getElementById('goalSelect').value = String(state.goal);
 
     // Ring
     const circumference = 490;
@@ -851,6 +1013,7 @@
     const now = new Date();
     const time = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
     state.logs.unshift({ ml, time });
+    saveState();
     updateUI();
     renderLog();
     pulseRipple();
@@ -880,31 +1043,35 @@
   }
 
   function pulseRipple() {
-    // Flash the ring
     const ring = document.getElementById('ringFill');
     ring.style.filter = 'brightness(1.3)';
     setTimeout(() => ring.style.filter = '', 400);
   }
 
-  // Notifications
   async function requestPermission() {
     if (!('Notification' in window)) {
-      document.getElementById('permStatus').textContent = '⚠️ Notifications not supported in this browser';
+      updateReminderStatus('⚠️ Notifications not supported in this browser');
       return;
     }
+
     const perm = await Notification.requestPermission();
     if (perm === 'granted') {
-      document.getElementById('permBtn').style.background = 'linear-gradient(135deg, #27ae60, #1e8449)';
-      document.getElementById('permBtn').innerHTML = '<span>✅</span> Notifications Enabled!';
-      document.getElementById('notifSuccess').classList.add('show');
-      setTimeout(() => document.getElementById('notifSuccess').classList.remove('show'), 3000);
-      document.getElementById('permStatus').textContent = '🌸 Zoey will be reminded to hydrate!';
-      document.getElementById('permStatus').className = 'perm-status granted';
-      state.notifEnabled = true;
-      document.getElementById('notifToggle').classList.add('on');
-      startReminder();
+      try {
+        await ensurePushSubscription();
+        state.notifEnabled = true;
+        saveState();
+        updateNotificationButton(true);
+        document.getElementById('notifToggle').classList.add('on');
+        document.getElementById('notifSuccess').classList.add('show');
+        setTimeout(() => document.getElementById('notifSuccess').classList.remove('show'), 3000);
+        updateReminderStatus('🌸 Push notifications activated successfully.', true);
+        await syncPushSettings();
+      } catch (error) {
+        updateNotificationButton(false);
+        updateReminderStatus(`❌ ${error.message}`);
+      }
     } else {
-      document.getElementById('permStatus').textContent = '❌ Permission denied. Enable in browser settings.';
+      updateReminderStatus('❌ Permission denied. Enable in browser settings.');
     }
   }
 
@@ -912,78 +1079,47 @@
     const toggle = document.getElementById('notifToggle');
     state.notifEnabled = !state.notifEnabled;
     toggle.classList.toggle('on', state.notifEnabled);
+    saveState();
+
     if (state.notifEnabled) {
-      startReminder();
+      updateNotificationButton(false);
+      updateReminderStatus(`🌸 Reminder interval changed to ${formatInterval(state.interval)}.`);
     } else {
-      clearInterval(reminderTimer);
+      updateReminderStatus('Allow notifications to receive reminders');
     }
+
+    syncPushSettings();
   }
 
-  function startReminder() {
-    clearInterval(reminderTimer);
-    if (!state.notifEnabled) return;
-    reminderTimer = setInterval(() => {
-      triggerReminder();
-    }, state.interval * 60 * 1000);
-  }
-
-  function triggerReminder() {
-    const msgs = [
-      ["Time to hydrate, Zoey! 💧", "Don't forget your water, beautiful 🌸"],
-      ["Hey Zoey! 🌊", "Your body is thirsty, take a sip!"],
-      ["Hydration check! 💙", `You're at ${state.current}ml — keep going!`],
-      ["Water break time! 🥤", "Stay refreshed, Zoey!"],
-    ];
-    const pick = msgs[Math.floor(Math.random() * msgs.length)];
-
-    // In-app banner
-    showBanner(pick[0], pick[1]);
-
-    // OS notification
-    if (Notification.permission === 'granted') {
-      new Notification(pick[0], {
-        body: pick[1],
-        icon: APP_ICON
-      });
-    }
-  }
-
-  function testNotification() {
+  async function testNotification() {
     if (!('Notification' in window)) {
-      document.getElementById('permStatus').textContent = '⚠️ Notifications not supported in this browser';
+      updateReminderStatus('⚠️ Notifications not supported in this browser');
       return;
     }
-
-    const fireTest = () => {
-      const tests = [
-        ["Test push sent 💧", "Lock the phone now to check if it arrives."],
-        ["Notification test 🌊", "This is a quick test notification."],
-        ["Hydration test ⚡", "You can safely lock the phone now."]
-      ];
-      const pick = tests[Math.floor(Math.random() * tests.length)];
-      showBanner(pick[0], pick[1]);
-
-      if (Notification.permission === 'granted') {
-        new Notification(pick[0], {
-          body: pick[1],
-          icon: APP_ICON
-        });
-      } else {
-        document.getElementById('permStatus').textContent = 'Tap Enable Notifications first, then test again.';
-      }
-    };
 
     if (Notification.permission !== 'granted') {
-      requestPermission().then(() => {
-        if (Notification.permission === 'granted') {
-          setTimeout(fireTest, 3000);
-        }
-      });
+      await requestPermission();
       return;
     }
 
-    document.getElementById('permStatus').textContent = 'Test scheduled in 3 seconds. Lock the phone now.';
-    setTimeout(fireTest, 3000);
+    try {
+      await ensurePushSubscription();
+      await syncPushSettings();
+      await fetch(PUSH_TEST_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          delayMs: 3000,
+          title: 'Test push sent 💧',
+          body: 'Lock the phone now to check if it arrives.',
+          icon: APP_ICON
+        })
+      });
+      updateReminderStatus('Test push scheduled in 3 seconds. Lock the phone now.', true);
+      showBanner('Test push scheduled', 'Lock the phone now to check if it arrives.');
+    } catch (error) {
+      updateReminderStatus(`❌ ${error.message}`);
+    }
   }
 
   function showBanner(title, body) {
@@ -1000,22 +1136,20 @@
 
   function setInterval_(mins, clickEvent) {
     state.interval = mins;
-    document.querySelectorAll('.interval-btn').forEach(b => b.classList.remove('active'));
-    if (clickEvent && clickEvent.target) {
-      clickEvent.target.classList.add('active');
-    }
-    document.getElementById('intervalSub').textContent = mins < 60 ? `Every ${mins} minutes` : `Every ${mins/60 === 1 ? '1 hour' : mins/60 + ' hours'}`;
+    syncIntervalUI();
+
     if (state.notifEnabled) {
-      document.getElementById('permBtn').style.background = 'linear-gradient(135deg, var(--ocean), var(--deep))';
-      document.getElementById('permBtn').innerHTML = '<span>🔔</span> Enable Notifications';
-      document.getElementById('permStatus').textContent = `🌸 Reminder interval changed to ${mins < 60 ? mins + ' minutes' : mins / 60 + ' hours'}.`;
-      document.getElementById('permStatus').className = 'perm-status';
+      updateNotificationButton(false);
+      updateReminderStatus(`🌸 Reminder interval changed to ${formatInterval(mins)}.`);
     }
-    if (state.notifEnabled) startReminder();
+
+    saveState();
+    syncPushSettings();
   }
 
   function setGoal(val) {
-    state.goal = parseInt(val);
+    state.goal = parseInt(val, 10);
+    saveState();
     updateUI();
   }
 
@@ -1026,7 +1160,22 @@
   createBubbles();
   renderStreak();
   updateUI();
+  syncIntervalUI();
   renderLog();
+  updateNotificationButton(state.notifEnabled);
+
+  if (state.notifEnabled) {
+    document.getElementById('notifToggle').classList.add('on');
+    updateReminderStatus(`🌸 Notifications are enabled and remembered. Every ${formatInterval(state.interval)}.`, true);
+  }
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js').then(() => restorePushState()).catch(() => {
+        // Ignore registration errors in unsupported or restricted browsers.
+      });
+    });
+  }
 </script>
 </body>
 </html>

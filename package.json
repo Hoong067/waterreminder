@@ -1,0 +1,11 @@
+{
+  "name": "zoeys-hydration",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}
