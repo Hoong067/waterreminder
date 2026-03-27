@@ -868,6 +868,22 @@
     return outputArray;
   }
 
+  function getPushServerHint() {
+    if (location.protocol === 'file:') {
+      return 'This page is opened from a file, so push cannot load the server key.';
+    }
+
+    if (['localhost', '127.0.0.1', '::1'].includes(location.hostname)) {
+      return 'This app is running on localhost. Your iPhone Home Screen app cannot reach your Windows PC localhost. Use a public HTTPS URL or a tunnel like Cloudflare Tunnel / ngrok.';
+    }
+
+    if (!window.isSecureContext) {
+      return 'Push notifications require HTTPS on iPhone.';
+    }
+
+    return `The phone could not reach ${location.origin}. Make sure the server is online and the app is opened from the same HTTPS origin.`;
+  }
+
   async function syncPushSettings() {
     try {
       await fetch(PUSH_SETTINGS_URL, {
@@ -908,9 +924,15 @@
       return existingSubscription;
     }
 
-    const keyResponse = await fetch(VAPID_PUBLIC_KEY_URL);
+    let keyResponse;
+    try {
+      keyResponse = await fetch(VAPID_PUBLIC_KEY_URL, { cache: 'no-store' });
+    } catch {
+      throw new Error(`Unable to load push key from the server. ${getPushServerHint()}`);
+    }
+
     if (!keyResponse.ok) {
-      throw new Error('Unable to load push key from the server. On iPhone, open the installed Home Screen app over HTTPS, not a normal Safari tab or local file.');
+      throw new Error(`Unable to load push key from the server. ${getPushServerHint()}`);
     }
 
     const { publicKey } = await keyResponse.json();
@@ -1119,7 +1141,7 @@
       showBanner('Test push scheduled', 'Lock the phone now to check if it arrives.');
     } catch (error) {
       if (error?.message?.includes('push key')) {
-        updateReminderStatus('❌ No usable push subscription yet. On iPhone, install the web app to Home Screen first, then reopen it and enable notifications again.');
+        updateReminderStatus(`❌ No usable push subscription yet. ${getPushServerHint()}`);
       } else {
         updateReminderStatus(`❌ ${error.message}`);
       }
