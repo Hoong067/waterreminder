@@ -6,6 +6,9 @@
 <meta name="theme-color" content="#b8e4f9">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Zoey's Hydration 💧</title>
+<link rel="icon" href="logo.png">
+<link rel="shortcut icon" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -758,6 +761,8 @@
 </div>
 
 <script>
+  const APP_ICON = 'logo.png';
+
   // State
   let state = {
     current: 0,
@@ -910,7 +915,7 @@
     if (Notification.permission === 'granted') {
       new Notification(pick[0], {
         body: pick[1],
-        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💧</text></svg>'
+        icon: APP_ICON
       });
     }
   }
@@ -933,7 +938,7 @@
       if (Notification.permission === 'granted') {
         new Notification(pick[0], {
           body: pick[1],
-          icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💧</text></svg>'
+          icon: APP_ICON
         });
       } else {
         document.getElementById('permStatus').textContent = 'Tap Enable Notifications first, then test again.';
