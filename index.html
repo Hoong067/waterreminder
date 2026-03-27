@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#b8e4f9">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <title>Zoey's Hydration 💧</title>
 <link rel="icon" href="logo.png">
 <link rel="shortcut icon" href="logo.png">
@@ -739,6 +740,12 @@
       <button class="interval-btn" onclick="setInterval_(90, event)">1.5 hr</button>
       <button class="interval-btn" onclick="setInterval_(120, event)">2 hr</button>
     </div>
+    <div style="margin-top:14px;padding:12px;border:1px solid rgba(74,184,232,0.18);border-radius:16px;background:rgba(255,255,255,0.55);">
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--soft);margin-bottom:8px;">Push Server</div>
+      <input id="pushServerUrl" type="url" placeholder="https://your-push-server.example" style="width:100%;border:1.5px solid rgba(74,184,232,0.22);background:rgba(255,255,255,0.85);border-radius:12px;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--deep);outline:none;" />
+      <div id="pushServerHint" style="margin-top:8px;font-size:12px;color:var(--soft);line-height:1.4;">Push server: same origin</div>
+      <button class="test-btn" onclick="savePushServerUrl()" style="width:100%;margin-top:10px;">Save Push Server URL</button>
+    </div>
     <div style="margin-top:20px;">
       <button class="perm-btn" id="permBtn" onclick="requestPermission()">
         <span>🔔</span> Enable Notifications
@@ -790,10 +797,25 @@
 <script>
   const APP_ICON = 'logo.png';
   const STORAGE_KEY = 'zoeys-hydration-state';
-  const VAPID_PUBLIC_KEY_URL = '/api/vapid-public-key';
-  const PUSH_SETTINGS_URL = '/api/settings';
-  const PUSH_SUBSCRIBE_URL = '/api/subscribe';
-  const PUSH_TEST_URL = '/api/send-test';
+  const PUSH_API_BASE_STORAGE_KEY = 'zoeys-hydration-push-api-base-url';
+
+  function getPushApiBaseUrl() {
+    return (localStorage.getItem(PUSH_API_BASE_STORAGE_KEY) || location.origin).replace(/\/$/, '');
+  }
+
+  function setPushApiBaseUrl(url) {
+    const value = String(url || '').trim().replace(/\/$/, '');
+    if (!value) {
+      localStorage.removeItem(PUSH_API_BASE_STORAGE_KEY);
+      return;
+    }
+
+    localStorage.setItem(PUSH_API_BASE_STORAGE_KEY, value);
+  }
+
+  function pushApiUrl(path) {
+    return `${getPushApiBaseUrl()}${path}`;
+  }
 
   const defaultState = {
     current: 0,
@@ -855,6 +877,18 @@
     status.className = isSuccess ? 'perm-status granted' : 'perm-status';
   }
 
+  function syncPushServerUi() {
+    const input = document.getElementById('pushServerUrl');
+    if (input) {
+      input.value = getPushApiBaseUrl();
+    }
+
+    const hint = document.getElementById('pushServerHint');
+    if (hint) {
+      hint.textContent = `Push server: ${getPushApiBaseUrl()}`;
+    }
+  }
+
   function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
     const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -886,7 +920,7 @@
 
   async function syncPushSettings() {
     try {
-      await fetch(PUSH_SETTINGS_URL, {
+      await fetch(pushApiUrl('/api/settings'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -900,7 +934,7 @@
   }
 
   async function savePushSubscription(subscription) {
-    const response = await fetch(PUSH_SUBSCRIBE_URL, {
+    const response = await fetch(pushApiUrl('/api/subscribe'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(subscription)
@@ -926,7 +960,7 @@
 
     let keyResponse;
     try {
-      keyResponse = await fetch(VAPID_PUBLIC_KEY_URL, { cache: 'no-store' });
+      keyResponse = await fetch(pushApiUrl('/api/vapid-public-key'), { cache: 'no-store' });
     } catch {
       throw new Error(`Unable to load push key from the server. ${getPushServerHint()}`);
     }
@@ -1179,6 +1213,27 @@
     updateUI();
   }
 
+  function savePushServerUrl() {
+    const input = document.getElementById('pushServerUrl');
+    const value = input.value.trim();
+
+    try {
+      if (!value) {
+        setPushApiBaseUrl('');
+        syncPushServerUi();
+        updateReminderStatus('Push server URL cleared. Set it again before enabling notifications.');
+        return;
+      }
+
+      const parsed = new URL(value);
+      setPushApiBaseUrl(parsed.origin);
+      syncPushServerUi();
+      updateReminderStatus(`✅ Push server saved: ${parsed.origin}`, true);
+    } catch {
+      updateReminderStatus('❌ Enter a valid HTTPS push server URL.');
+    }
+  }
+
   // Demo notification after 8 seconds
   setTimeout(() => showBanner("Hey Zoey! 💧", "Remember to drink water today! 🌸"), 8000);
 
@@ -1189,10 +1244,15 @@
   syncIntervalUI();
   renderLog();
   updateNotificationButton(state.notifEnabled);
+  syncPushServerUi();
 
   if (state.notifEnabled) {
     document.getElementById('notifToggle').classList.add('on');
     updateReminderStatus(`🌸 Notifications are enabled and remembered. Every ${formatInterval(state.interval)}.`, true);
+  }
+
+  if (location.hostname.includes('github.io') && getPushApiBaseUrl() === location.origin) {
+    updateReminderStatus('⚠️ GitHub Pages is static. Set your push server URL below before enabling notifications.');
   }
 
   if ('serviceWorker' in navigator) {

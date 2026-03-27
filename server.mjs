@@ -27,6 +27,12 @@ const contentTypes = {
   '.ico': 'image/x-icon',
 };
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
 let vapidKeys = null;
 let subscriptions = [];
 let settings = { ...defaultSettings };
@@ -157,9 +163,15 @@ createServer(async (req, res) => {
   try {
     const url = new URL(req.url || '/', 'http://localhost');
 
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, corsHeaders);
+      res.end();
+      return;
+    }
+
     if (req.method === 'GET' && url.pathname === '/api/vapid-public-key') {
       const { publicKey } = await ensureVapidKeys();
-      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({ publicKey }));
       return;
     }
@@ -168,7 +180,7 @@ createServer(async (req, res) => {
       const body = await readRequestBody(req);
       const subscription = safeJsonParse(body, null);
       if (!subscription || !subscription.endpoint) {
-        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.writeHead(400, { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify({ error: 'Invalid subscription' }));
         return;
       }
@@ -177,7 +189,7 @@ createServer(async (req, res) => {
       subscriptions.push(subscription);
       await saveSubscriptions();
 
-      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({ ok: true }));
       return;
     }
@@ -198,7 +210,7 @@ createServer(async (req, res) => {
       }
 
       await saveSettings();
-      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({ ok: true }));
       return;
     }
@@ -213,7 +225,7 @@ createServer(async (req, res) => {
       });
 
       await schedulePush(payload, delayMs);
-      res.writeHead(202, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.writeHead(202, { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify({ ok: true, scheduledInMs: delayMs }));
       return;
     }
