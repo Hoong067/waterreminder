@@ -489,6 +489,27 @@
 
   .perm-btn:active { transform: scale(0.97); }
 
+  .test-btn {
+    width: 100%;
+    padding: 14px;
+    margin-top: 10px;
+    background: rgba(255,255,255,0.65);
+    color: var(--deep);
+    border: 1.5px solid rgba(74,184,232,0.28);
+    border-radius: 18px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.2px;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .test-btn:active {
+    transform: scale(0.97);
+    background: rgba(74,184,232,0.12);
+  }
+
   .perm-status {
     font-size: 12px;
     color: var(--soft);
@@ -693,6 +714,9 @@
       <button class="perm-btn" id="permBtn" onclick="requestPermission()">
         <span>🔔</span> Enable Notifications
       </button>
+      <button class="test-btn" id="testBtn" onclick="testNotification()">
+        <span>⚡</span> Test Notification
+      </button>
       <div class="perm-status" id="permStatus">Allow notifications to receive reminders</div>
     </div>
   </div>
@@ -889,6 +913,44 @@
         icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💧</text></svg>'
       });
     }
+  }
+
+  function testNotification() {
+    if (!('Notification' in window)) {
+      document.getElementById('permStatus').textContent = '⚠️ Notifications not supported in this browser';
+      return;
+    }
+
+    const fireTest = () => {
+      const tests = [
+        ["Test push sent 💧", "Lock the phone now to check if it arrives."],
+        ["Notification test 🌊", "This is a quick test notification."],
+        ["Hydration test ⚡", "You can safely lock the phone now."]
+      ];
+      const pick = tests[Math.floor(Math.random() * tests.length)];
+      showBanner(pick[0], pick[1]);
+
+      if (Notification.permission === 'granted') {
+        new Notification(pick[0], {
+          body: pick[1],
+          icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💧</text></svg>'
+        });
+      } else {
+        document.getElementById('permStatus').textContent = 'Tap Enable Notifications first, then test again.';
+      }
+    };
+
+    if (Notification.permission !== 'granted') {
+      requestPermission().then(() => {
+        if (Notification.permission === 'granted') {
+          setTimeout(fireTest, 3000);
+        }
+      });
+      return;
+    }
+
+    document.getElementById('permStatus').textContent = 'Test scheduled in 3 seconds. Lock the phone now.';
+    setTimeout(fireTest, 3000);
   }
 
   function showBanner(title, body) {
