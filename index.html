@@ -1005,6 +1005,12 @@
       clickEvent.target.classList.add('active');
     }
     document.getElementById('intervalSub').textContent = mins < 60 ? `Every ${mins} minutes` : `Every ${mins/60 === 1 ? '1 hour' : mins/60 + ' hours'}`;
+    if (state.notifEnabled) {
+      document.getElementById('permBtn').style.background = 'linear-gradient(135deg, var(--ocean), var(--deep))';
+      document.getElementById('permBtn').innerHTML = '<span>🔔</span> Enable Notifications';
+      document.getElementById('permStatus').textContent = `🌸 Reminder interval changed to ${mins < 60 ? mins + ' minutes' : mins / 60 + ' hours'}.`;
+      document.getElementById('permStatus').className = 'perm-status';
+    }
     if (state.notifEnabled) startReminder();
   }
 
