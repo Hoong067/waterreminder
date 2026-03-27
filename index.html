@@ -390,6 +390,30 @@
     font-weight: 500;
   }
 
+  .success-banner {
+    margin-top: 0;
+    padding: 0 12px;
+    border-radius: 14px;
+    background: rgba(39, 174, 96, 0.12);
+    color: #1e8449;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: center;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: max-height 0.35s ease, opacity 0.35s ease, transform 0.35s ease, margin-top 0.35s ease, padding 0.35s ease;
+  }
+
+  .success-banner.show {
+    margin-top: 10px;
+    padding: 10px 12px;
+    max-height: 60px;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
   /* Log */
   .log-list {
     display: flex;
@@ -708,6 +732,7 @@
       </div>
     </div>
     <div class="interval-btns">
+      <button class="interval-btn" onclick="setInterval_(1, event)">1 min</button>
       <button class="interval-btn" onclick="setInterval_(30, event)">30 min</button>
       <button class="interval-btn active" onclick="setInterval_(60, event)">1 hr</button>
       <button class="interval-btn" onclick="setInterval_(90, event)">1.5 hr</button>
@@ -720,6 +745,7 @@
       <button class="test-btn" id="testBtn" onclick="testNotification()">
         <span>⚡</span> Test Notification
       </button>
+      <div class="success-banner" id="notifSuccess">Push notification activated successfully.</div>
       <div class="perm-status" id="permStatus">Allow notifications to receive reminders</div>
     </div>
   </div>
@@ -870,6 +896,8 @@
     if (perm === 'granted') {
       document.getElementById('permBtn').style.background = 'linear-gradient(135deg, #27ae60, #1e8449)';
       document.getElementById('permBtn').innerHTML = '<span>✅</span> Notifications Enabled!';
+      document.getElementById('notifSuccess').classList.add('show');
+      setTimeout(() => document.getElementById('notifSuccess').classList.remove('show'), 3000);
       document.getElementById('permStatus').textContent = '🌸 Zoey will be reminded to hydrate!';
       document.getElementById('permStatus').className = 'perm-status granted';
       state.notifEnabled = true;
