@@ -800,7 +800,16 @@
   const PUSH_API_BASE_STORAGE_KEY = 'zoeys-hydration-push-api-base-url';
 
   function getPushApiBaseUrl() {
-    return (localStorage.getItem(PUSH_API_BASE_STORAGE_KEY) || location.origin).replace(/\/$/, '');
+    const saved = (localStorage.getItem(PUSH_API_BASE_STORAGE_KEY) || '').replace(/\/$/, '');
+    if (saved) {
+      return saved;
+    }
+
+    if (location.hostname.includes('github.io')) {
+      return '';
+    }
+
+    return location.origin.replace(/\/$/, '');
   }
 
   function setPushApiBaseUrl(url) {
@@ -814,7 +823,8 @@
   }
 
   function pushApiUrl(path) {
-    return `${getPushApiBaseUrl()}${path}`;
+    const baseUrl = getPushApiBaseUrl();
+    return baseUrl ? `${baseUrl}${path}` : path;
   }
 
   const defaultState = {
@@ -885,7 +895,9 @@
 
     const hint = document.getElementById('pushServerHint');
     if (hint) {
-      hint.textContent = `Push server: ${getPushApiBaseUrl()}`;
+      hint.textContent = getPushApiBaseUrl()
+        ? `Push server: ${getPushApiBaseUrl()}`
+        : 'Push server not configured yet. GitHub Pages needs a separate HTTPS backend URL.';
     }
   }
 
@@ -916,6 +928,10 @@
       return 'This page is opened from a file, so push cannot load the server key.';
     }
 
+    if (!getPushApiBaseUrl()) {
+      return 'GitHub Pages is static. Enter your push backend HTTPS URL in the Push Server field.';
+    }
+
     if (['localhost', '127.0.0.1', '::1'].includes(location.hostname)) {
       return 'This app is running on localhost. Your iPhone Home Screen app cannot reach your Windows PC localhost. Use a public HTTPS URL or a tunnel like Cloudflare Tunnel / ngrok.';
     }
@@ -929,6 +945,11 @@
 
   async function syncPushSettings() {
     try {
+      if (!getPushApiBaseUrl()) {
+        logPushDebug('sync settings skipped', { reason: 'no push backend configured' });
+        return;
+      }
+
       const url = pushApiUrl('/api/settings');
       logPushDebug('sync settings', { url, enabled: state.notifEnabled, intervalMinutes: state.interval });
       const response = await fetch(url, {
@@ -947,6 +968,10 @@
   }
 
   async function savePushSubscription(subscription) {
+    if (!getPushApiBaseUrl()) {
+      throw new Error('Set a Push Server URL first.');
+    }
+
     const url = pushApiUrl('/api/subscribe');
     logPushDebug('save subscription', { url, endpoint: subscription?.endpoint });
     const response = await fetch(url, {
@@ -965,6 +990,10 @@
   async function ensurePushSubscription() {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       throw new Error('Push notifications are not supported in this browser');
+    }
+
+    if (!getPushApiBaseUrl()) {
+      throw new Error('Set a Push Server URL first. GitHub Pages cannot serve /api/* itself.');
     }
 
     const registration = await navigator.serviceWorker.ready;
@@ -1136,6 +1165,12 @@
     }
 
     logPushDebug('request permission start', { permission: Notification.permission, pushApiBaseUrl: getPushApiBaseUrl(), origin: location.origin, standalone: window.matchMedia('(display-mode: standalone)').matches });
+
+    if (!getPushApiBaseUrl()) {
+      updateReminderStatus('❌ Set your Push Server URL first. GitHub Pages cannot provide /api/vapid-public-key by itself.');
+      return;
+    }
+
     const perm = await Notification.requestPermission();
     if (perm === 'granted') {
       try {
@@ -1165,6 +1200,14 @@
     saveState();
 
     if (state.notifEnabled) {
+      if (!getPushApiBaseUrl()) {
+        state.notifEnabled = false;
+        toggle.classList.remove('on');
+        saveState();
+        updateReminderStatus('❌ Set your Push Server URL first. GitHub Pages cannot call /api/settings or /api/vapid-public-key on its own.');
+        return;
+      }
+
       updateNotificationButton(false);
       updateReminderStatus(`🌸 Reminder interval changed to ${formatInterval(state.interval)}.`);
     } else {
@@ -1182,6 +1225,11 @@
 
     if (Notification.permission !== 'granted') {
       await requestPermission();
+      return;
+    }
+
+    if (!getPushApiBaseUrl()) {
+      updateReminderStatus('❌ Set your Push Server URL first. GitHub Pages cannot send /api/send-test to itself.');
       return;
     }
 
