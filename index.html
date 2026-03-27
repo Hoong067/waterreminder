@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#b8e4f9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Zoey's Hydration 💧</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sky: #b8e4f9;
+    --ocean: #4ab8e8;
+    --deep: #1a7fb5;
+    --foam: #e8f7ff;
+    --coral: #ff7eb3;
+    --gold: #ffd166;
+    --mint: #a8f0d5;
+    --text: #1a3a4a;
+    --soft: #5a8fa3;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--foam);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Animated background */
+  .bg-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: linear-gradient(160deg, #d6f0ff 0%, #e8f7ff 40%, #c5ecff 100%);
+    overflow: hidden;
+  }
+
+  .bubble {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.7), rgba(74,184,232,0.15));
+    border: 1px solid rgba(74,184,232,0.2);
+    animation: floatUp linear infinite;
+  }
+
+  @keyframes floatUp {
+    0% { transform: translateY(110vh) scale(0.5); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 0.6; }
+    100% { transform: translateY(-20vh) scale(1.1); opacity: 0; }
+  }
+
+  /* Wave at bottom */
+  .wave-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 120px;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .wave {
+    position: absolute;
+    bottom: 0;
+    width: 200%;
+    height: 100%;
+    animation: waveMove 6s linear infinite;
+  }
+
+  .wave svg { width: 100%; height: 100%; }
+  .wave2 { animation-delay: -3s; opacity: 0.5; }
+
+  @keyframes waveMove {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* Main container */
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 0 0 140px;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    padding: 44px 28px 20px;
+    text-align: center;
+  }
+
+  .greeting {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--soft);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    opacity: 0;
+    animation: fadeDown 0.8s ease forwards 0.2s;
+  }
+
+  .name {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--deep);
+    margin-bottom: 4px;
+    opacity: 0;
+    animation: fadeDown 0.8s ease forwards 0.4s;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: var(--soft);
+    font-weight: 300;
+    opacity: 0;
+    animation: fadeDown 0.8s ease forwards 0.6s;
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Glass card */
+  .card {
+    margin: 16px 20px;
+    background: rgba(255,255,255,0.65);
+    backdrop-filter: blur(20px);
+    border-radius: 28px;
+    border: 1px solid rgba(255,255,255,0.85);
+    box-shadow: 0 8px 32px rgba(74,184,232,0.12), 0 2px 8px rgba(255,255,255,0.5) inset;
+    padding: 24px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards;
+  }
+
+  .card:nth-child(2) { animation-delay: 0.5s; }
+  .card:nth-child(3) { animation-delay: 0.65s; }
+  .card:nth-child(4) { animation-delay: 0.8s; }
+  .card:nth-child(5) { animation-delay: 0.95s; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Water glass visual */
+  .glass-section {
+    text-align: center;
+    padding: 8px 0 4px;
+  }
+
+  .glass-wrap {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 20px;
+  }
+
+  .glass-svg {
+    width: 120px;
+    height: 160px;
+    filter: drop-shadow(0 8px 20px rgba(74,184,232,0.3));
+  }
+
+  .water-fill {
+    transition: height 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), y 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .ripple-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 2px solid rgba(74,184,232,0.4);
+    animation: ripple 2s ease-out infinite;
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  .ripple-ring.active { opacity: 1; }
+
+  @keyframes ripple {
+    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.8; }
+    100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+  }
+
+  .progress-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--deep);
+    line-height: 1;
+  }
+
+  .progress-sub {
+    font-size: 13px;
+    color: var(--soft);
+    margin-top: 4px;
+  }
+
+  .goal-text {
+    font-size: 12px;
+    color: var(--coral);
+    font-weight: 500;
+    margin-top: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  /* Add water buttons */
+  .add-section .label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--soft);
+    margin-bottom: 14px;
+    font-weight: 500;
+  }
+
+  .water-btns {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+
+  .water-btn {
+    background: linear-gradient(135deg, rgba(74,184,232,0.15), rgba(255,255,255,0.5));
+    border: 1.5px solid rgba(74,184,232,0.3);
+    border-radius: 18px;
+    padding: 14px 6px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    text-align: center;
+    color: var(--deep);
+  }
+
+  .water-btn:active {
+    transform: scale(0.9);
+    background: linear-gradient(135deg, rgba(74,184,232,0.3), rgba(255,255,255,0.7));
+  }
+
+  .water-btn .ml {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    display: block;
+  }
+
+  .water-btn .unit {
+    font-size: 10px;
+    color: var(--soft);
+    margin-top: 2px;
+  }
+
+  .water-btn .icon {
+    font-size: 20px;
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  /* Reminder settings */
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    color: var(--deep);
+    margin-bottom: 16px;
+  }
+
+  .reminder-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(74,184,232,0.1);
+  }
+
+  .reminder-row:last-child { border-bottom: none; }
+
+  .reminder-label {
+    font-size: 14px;
+    color: var(--text);
+    font-weight: 400;
+  }
+
+  .reminder-sub {
+    font-size: 11px;
+    color: var(--soft);
+    margin-top: 2px;
+  }
+
+  /* Toggle switch */
+  .toggle {
+    width: 48px;
+    height: 26px;
+    background: #d0e8f5;
+    border-radius: 13px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    flex-shrink: 0;
+  }
+
+  .toggle.on { background: var(--ocean); }
+
+  .toggle-dot {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    top: 3px;
+    left: 3px;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+
+  .toggle.on .toggle-dot { transform: translateX(22px); }
+
+  /* Interval selector */
+  .interval-btns {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+
+  .interval-btn {
+    padding: 8px 14px;
+    border-radius: 20px;
+    border: 1.5px solid rgba(74,184,232,0.3);
+    background: transparent;
+    font-size: 13px;
+    color: var(--soft);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .interval-btn.active {
+    background: var(--ocean);
+    border-color: var(--ocean);
+    color: white;
+    font-weight: 500;
+  }
+
+  /* Log */
+  .log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .log-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: rgba(74,184,232,0.07);
+    border-radius: 14px;
+    animation: slideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-16px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .log-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--ocean);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .log-info { flex: 1; }
+  .log-ml { font-size: 15px; font-weight: 500; color: var(--deep); }
+  .log-time { font-size: 11px; color: var(--soft); }
+
+  /* Notification banner */
+  .notif-banner {
+    position: fixed;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 40px);
+    max-width: 380px;
+    background: white;
+    border-radius: 20px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 20px 60px rgba(74,184,232,0.25), 0 4px 12px rgba(0,0,0,0.08);
+    z-index: 1000;
+    transition: top 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 1px solid rgba(74,184,232,0.2);
+  }
+
+  .notif-banner.show { top: 20px; }
+
+  .notif-icon {
+    font-size: 28px;
+    animation: bounce 1s ease infinite;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  .notif-text { flex: 1; }
+  .notif-title { font-weight: 500; font-size: 14px; color: var(--deep); }
+  .notif-body { font-size: 12px; color: var(--soft); margin-top: 2px; }
+
+  .notif-close {
+    font-size: 18px;
+    color: var(--soft);
+    cursor: pointer;
+    padding: 4px;
+  }
+
+  /* Permission btn */
+  .perm-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--ocean), var(--deep));
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    box-shadow: 0 8px 24px rgba(74,184,232,0.4);
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .perm-btn:active { transform: scale(0.97); }
+
+  .perm-status {
+    font-size: 12px;
+    color: var(--soft);
+    text-align: center;
+    margin-top: 10px;
+  }
+
+  .perm-status.granted { color: #27ae60; }
+
+  /* Progress ring */
+  .progress-ring-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  .progress-ring {
+    transform: rotate(-90deg);
+  }
+
+  .ring-track { fill: none; stroke: rgba(74,184,232,0.15); stroke-width: 8; }
+  .ring-fill {
+    fill: none;
+    stroke: url(#ringGrad);
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .ring-center {
+    position: absolute;
+    text-align: center;
+  }
+
+  /* Streak */
+  .streak-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 4px;
+  }
+
+  .streak-day {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: rgba(74,184,232,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: var(--soft);
+    font-weight: 500;
+  }
+
+  .streak-day.done {
+    background: linear-gradient(135deg, var(--ocean), var(--deep));
+    color: white;
+  }
+
+  .streak-day.today {
+    border: 2px solid var(--ocean);
+    color: var(--ocean);
+    font-weight: 700;
+  }
+
+  /* Empty state */
+  .empty-log {
+    text-align: center;
+    color: var(--soft);
+    font-size: 13px;
+    padding: 20px;
+  }
+
+  /* Custom scrollbar */
+  .log-list::-webkit-scrollbar { width: 4px; }
+  .log-list::-webkit-scrollbar-track { background: transparent; }
+  .log-list::-webkit-scrollbar-thumb { background: rgba(74,184,232,0.3); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- Background -->
+<div class="bg-layer" id="bgLayer"></div>
+
+<!-- Waves -->
+<div class="wave-container">
+  <div class="wave">
+    <svg viewBox="0 0 1440 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+      <path d="M0,60 C240,110 480,10 720,60 C960,110 1200,10 1440,60 L1440,120 L0,120 Z" fill="rgba(74,184,232,0.18)"/>
+    </svg>
+  </div>
+  <div class="wave wave2">
+    <svg viewBox="0 0 1440 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+      <path d="M0,40 C360,90 720,0 1080,50 C1260,75 1380,30 1440,40 L1440,120 L0,120 Z" fill="rgba(74,184,232,0.12)"/>
+    </svg>
+  </div>
+</div>
+
+<!-- Notification banner -->
+<div class="notif-banner" id="notifBanner">
+  <div class="notif-icon">💧</div>
+  <div class="notif-text">
+    <div class="notif-title" id="notifTitle">Time to hydrate, Zoey!</div>
+    <div class="notif-body" id="notifBody">You haven't had water in a while 🌸</div>
+  </div>
+  <div class="notif-close" onclick="closeNotif()">✕</div>
+</div>
+
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="greeting">stay hydrated,</div>
+    <div class="name">Zoey Lim 🌸</div>
+    <div class="subtitle">your personal water companion</div>
+  </div>
+
+  <!-- Water progress -->
+  <div class="card" style="text-align:center;">
+    <div class="progress-ring-wrap">
+      <svg class="progress-ring" width="180" height="180" viewBox="0 0 180 180">
+        <defs>
+          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4ab8e8"/>
+            <stop offset="100%" style="stop-color:#1a7fb5"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-track" cx="90" cy="90" r="78"/>
+        <circle class="ring-fill" id="ringFill" cx="90" cy="90" r="78"
+          stroke-dasharray="490"
+          stroke-dashoffset="490"/>
+      </svg>
+      <div class="ring-center">
+        <div class="progress-text" id="currentMl">0</div>
+        <div class="progress-sub">of <span id="goalMl">2000</span> ml</div>
+        <div class="goal-text" id="percentText">0% today</div>
+      </div>
+    </div>
+
+    <!-- Streak -->
+    <div class="streak-row" id="streakRow"></div>
+  </div>
+
+  <!-- Add water -->
+  <div class="card add-section">
+    <div class="label">add water 💧</div>
+    <div class="water-btns">
+      <div class="water-btn" onclick="addWater(150)">
+        <span class="icon">🥤</span>
+        <span class="ml">150</span>
+        <span class="unit">ml</span>
+      </div>
+      <div class="water-btn" onclick="addWater(250)">
+        <span class="icon">🧃</span>
+        <span class="ml">250</span>
+        <span class="unit">ml</span>
+      </div>
+      <div class="water-btn" onclick="addWater(350)">
+        <span class="icon">🍶</span>
+        <span class="ml">350</span>
+        <span class="unit">ml</span>
+      </div>
+      <div class="water-btn" onclick="addWater(500)">
+        <span class="icon">🫙</span>
+        <span class="ml">500</span>
+        <span class="unit">ml</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reminders -->
+  <div class="card">
+    <div class="section-title">⏰ Reminders</div>
+    <div class="reminder-row">
+      <div>
+        <div class="reminder-label">Push Notifications</div>
+        <div class="reminder-sub">Gentle reminders for Zoey</div>
+      </div>
+      <div class="toggle" id="notifToggle" onclick="toggleNotif()">
+        <div class="toggle-dot"></div>
+      </div>
+    </div>
+    <div class="reminder-row">
+      <div>
+        <div class="reminder-label">Remind Interval</div>
+        <div class="reminder-sub" id="intervalSub">Every 60 minutes</div>
+      </div>
+    </div>
+    <div class="interval-btns">
+      <button class="interval-btn" onclick="setInterval_(30, event)">30 min</button>
+      <button class="interval-btn active" onclick="setInterval_(60, event)">1 hr</button>
+      <button class="interval-btn" onclick="setInterval_(90, event)">1.5 hr</button>
+      <button class="interval-btn" onclick="setInterval_(120, event)">2 hr</button>
+    </div>
+    <div style="margin-top:20px;">
+      <button class="perm-btn" id="permBtn" onclick="requestPermission()">
+        <span>🔔</span> Enable Notifications
+      </button>
+      <div class="perm-status" id="permStatus">Allow notifications to receive reminders</div>
+    </div>
+  </div>
+
+  <!-- Daily goal -->
+  <div class="card">
+    <div class="section-title">🎯 Daily Goal</div>
+    <div class="reminder-row">
+      <div>
+        <div class="reminder-label">Water Target</div>
+        <div class="reminder-sub">Recommended for your body</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="goalSelect" onchange="setGoal(this.value)" style="border:1.5px solid rgba(74,184,232,0.3);background:rgba(255,255,255,0.7);border-radius:12px;padding:6px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--deep);outline:none;cursor:pointer;">
+          <option value="1500">1500 ml</option>
+          <option value="2000" selected>2000 ml</option>
+          <option value="2500">2500 ml</option>
+          <option value="3000">3000 ml</option>
+        </select>
+      </div>
+    </div>
+    <div class="reminder-row">
+      <div>
+        <div class="reminder-label">Reset Daily at</div>
+        <div class="reminder-sub">Midnight auto-reset</div>
+      </div>
+      <div style="font-size:13px;color:var(--ocean);font-weight:500;">12:00 AM</div>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="card">
+    <div class="section-title">📋 Today's Log</div>
+    <div class="log-list" id="logList">
+      <div class="empty-log">No water logged yet.<br>Start hydrating, Zoey! 💙</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // State
+  let state = {
+    current: 0,
+    goal: 2000,
+    interval: 60,
+    notifEnabled: false,
+    logs: [],
+    streak: [true, true, true, false, true, true, false]
+  };
+
+  let reminderTimer = null;
+
+  // Init bubbles
+  function createBubbles() {
+    const bg = document.getElementById('bgLayer');
+    for (let i = 0; i < 12; i++) {
+      const b = document.createElement('div');
+      b.className = 'bubble';
+      const size = Math.random() * 60 + 20;
+      b.style.cssText = `
+        width:${size}px; height:${size}px;
+        left:${Math.random()*100}%;
+        animation-duration:${Math.random()*12+8}s;
+        animation-delay:${Math.random()*10}s;
+      `;
+      bg.appendChild(b);
+    }
+  }
+
+  // Streak
+  function renderStreak() {
+    const days = ['M','T','W','T','F','S','S'];
+    const row = document.getElementById('streakRow');
+    row.innerHTML = days.map((d,i) => {
+      const cls = state.streak[i] ? 'streak-day done' : (i === 6 ? 'streak-day today' : 'streak-day');
+      return `<div class="${cls}">${d}</div>`;
+    }).join('');
+  }
+
+  // Update UI
+  function updateUI() {
+    const pct = Math.min(state.current / state.goal, 1);
+    document.getElementById('currentMl').textContent = state.current;
+    document.getElementById('goalMl').textContent = state.goal;
+    document.getElementById('percentText').textContent = Math.round(pct * 100) + '% today';
+
+    // Ring
+    const circumference = 490;
+    const offset = circumference - pct * circumference;
+    document.getElementById('ringFill').style.strokeDashoffset = offset;
+
+    // Emoji feedback
+    const pctNum = Math.round(pct * 100);
+    let emoji = pctNum === 0 ? '🌵' : pctNum < 30 ? '😴' : pctNum < 60 ? '💙' : pctNum < 100 ? '🌊' : '✨';
+    document.getElementById('percentText').textContent = emoji + ' ' + pctNum + '% today';
+  }
+
+  function addWater(ml) {
+    state.current = Math.min(state.current + ml, state.goal * 1.5);
+    const now = new Date();
+    const time = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    state.logs.unshift({ ml, time });
+    updateUI();
+    renderLog();
+    pulseRipple();
+
+    // Celebrate at goal
+    if (state.current >= state.goal) {
+      setTimeout(() => showBanner('🎉 Goal reached!', "Amazing Zoey, you're fully hydrated! 💙"), 500);
+    }
+  }
+
+  function renderLog() {
+    const list = document.getElementById('logList');
+    if (state.logs.length === 0) {
+      list.innerHTML = '<div class="empty-log">No water logged yet.<br>Start hydrating, Zoey! 💙</div>';
+      return;
+    }
+    list.innerHTML = state.logs.slice(0, 10).map(l => `
+      <div class="log-item">
+        <div class="log-dot"></div>
+        <div class="log-info">
+          <div class="log-ml">+${l.ml} ml</div>
+          <div class="log-time">${l.time}</div>
+        </div>
+        <span style="font-size:18px;">💧</span>
+      </div>
+    `).join('');
+  }
+
+  function pulseRipple() {
+    // Flash the ring
+    const ring = document.getElementById('ringFill');
+    ring.style.filter = 'brightness(1.3)';
+    setTimeout(() => ring.style.filter = '', 400);
+  }
+
+  // Notifications
+  async function requestPermission() {
+    if (!('Notification' in window)) {
+      document.getElementById('permStatus').textContent = '⚠️ Notifications not supported in this browser';
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') {
+      document.getElementById('permBtn').style.background = 'linear-gradient(135deg, #27ae60, #1e8449)';
+      document.getElementById('permBtn').innerHTML = '<span>✅</span> Notifications Enabled!';
+      document.getElementById('permStatus').textContent = '🌸 Zoey will be reminded to hydrate!';
+      document.getElementById('permStatus').className = 'perm-status granted';
+      state.notifEnabled = true;
+      document.getElementById('notifToggle').classList.add('on');
+      startReminder();
+    } else {
+      document.getElementById('permStatus').textContent = '❌ Permission denied. Enable in browser settings.';
+    }
+  }
+
+  function toggleNotif() {
+    const toggle = document.getElementById('notifToggle');
+    state.notifEnabled = !state.notifEnabled;
+    toggle.classList.toggle('on', state.notifEnabled);
+    if (state.notifEnabled) {
+      startReminder();
+    } else {
+      clearInterval(reminderTimer);
+    }
+  }
+
+  function startReminder() {
+    clearInterval(reminderTimer);
+    if (!state.notifEnabled) return;
+    reminderTimer = setInterval(() => {
+      triggerReminder();
+    }, state.interval * 60 * 1000);
+  }
+
+  function triggerReminder() {
+    const msgs = [
+      ["Time to hydrate, Zoey! 💧", "Don't forget your water, beautiful 🌸"],
+      ["Hey Zoey! 🌊", "Your body is thirsty, take a sip!"],
+      ["Hydration check! 💙", `You're at ${state.current}ml — keep going!`],
+      ["Water break time! 🥤", "Stay refreshed, Zoey!"],
+    ];
+    const pick = msgs[Math.floor(Math.random() * msgs.length)];
+
+    // In-app banner
+    showBanner(pick[0], pick[1]);
+
+    // OS notification
+    if (Notification.permission === 'granted') {
+      new Notification(pick[0], {
+        body: pick[1],
+        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">💧</text></svg>'
+      });
+    }
+  }
+
+  function showBanner(title, body) {
+    document.getElementById('notifTitle').textContent = title;
+    document.getElementById('notifBody').textContent = body;
+    const banner = document.getElementById('notifBanner');
+    banner.classList.add('show');
+    setTimeout(closeNotif, 5000);
+  }
+
+  function closeNotif() {
+    document.getElementById('notifBanner').classList.remove('show');
+  }
+
+  function setInterval_(mins, clickEvent) {
+    state.interval = mins;
+    document.querySelectorAll('.interval-btn').forEach(b => b.classList.remove('active'));
+    if (clickEvent && clickEvent.target) {
+      clickEvent.target.classList.add('active');
+    }
+    document.getElementById('intervalSub').textContent = mins < 60 ? `Every ${mins} minutes` : `Every ${mins/60 === 1 ? '1 hour' : mins/60 + ' hours'}`;
+    if (state.notifEnabled) startReminder();
+  }
+
+  function setGoal(val) {
+    state.goal = parseInt(val);
+    updateUI();
+  }
+
+  // Demo notification after 8 seconds
+  setTimeout(() => showBanner("Hey Zoey! 💧", "Remember to drink water today! 🌸"), 8000);
+
+  // Init
+  createBubbles();
+  renderStreak();
+  updateUI();
+  renderLog();
+</script>
+</body>
+</html>
